@@ -9,29 +9,29 @@ __email__ = "asgari@berkeley.edu"
 __project__ = "DIMOTIF 2018"
 __website__ = "llp.berkeley.edu/dimotif"
 
-
 import sys
 sys.path.append('../')
 import ete3
 import random
 from ete3 import Tree, TreeStyle, NodeStyle, faces, AttrFace, CircleFace, TextFace, RectFace, random_color, ProfileFace
+
+from PyQt5.QtGui import QBrush, QColor
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from PyQt4 import QtGui
 import matplotlib.colors as colors
 import matplotlib.cm as cmx
 import numpy as np
 from proteinseq_util.motif_properties import MotifProperties
 
 def get_color_gradient(self):
-    cNorm  = colors.Normalize(vmin=0, vmax=1)
+    cNorm = colors.Normalize(vmin=0, vmax=1)
     scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=plt.get_cmap('coolwarm'))
     color_scale = []
     for scale in np.linspace(0, 1, 201):
-            b=[int(x) for x in scalarMap.to_rgba(scale)[:3]]
-            hex_color = '#%02x%02x%02x' % (b[0],b[1],b[2])
-            [r,g,b,a] = scalarMap.to_rgba(scale, bytes=True)
-            color_scale.append( QtGui.QColor( r, g, b, a ) )
+        [r, g, b, a] = scalarMap.to_rgba(scale, bytes=True)
+        # Returns standard Python integer tuple (r, g, b, a)
+        color_scale.append(QColor(int(r), int(g), int(b), int(a)))
     return color_scale
 
 class VisualizeTreeOfMotifs(object):
@@ -59,7 +59,6 @@ class VisualizeTreeOfMotifs(object):
         plt.rc('xtick', labelsize=0.1)
         plt.rc('ytick', labelsize=0.1)
         plt.rc({'font.size':0.2})
-        plt.rc('text', usetex=True)
 
         # legend creation
         if self.motif2struct and self.struct2color_dic:
@@ -122,7 +121,7 @@ class VisualizeTreeOfMotifs(object):
             ts.legend.add_face(x, column=11)
             ts.legend.add_face(TextFace(' '+y+'   ', fsize=25,ftype='Times'), column=12)
 
-        t.render(filename+'.pdf',tree_style=ts,dpi=5000)
+        t.render(filename +'.pdf',tree_style=ts,dpi=300)
 
 
     @staticmethod
