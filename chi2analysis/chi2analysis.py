@@ -76,7 +76,8 @@ class Chi2Analysis(object):
         new_scores={}
         for w, score in scores.items():
             if score[1] < 0.05:
-                feature_array = X[:, self.feature_names.index(w)]
+                idx = np.where(self.feature_names == w)[0][0]
+                feature_array = X[:, idx]
                 pos = [feature_array[idx] for idx, x in enumerate(self.Y) if x == 1]
                 neg = [feature_array[idx] for idx, x in enumerate(self.Y) if x == 0]
                 m_pos=np.mean(pos)
@@ -103,7 +104,8 @@ class Chi2Analysis(object):
 
         for w, score in scores:
             if score[1] < 0.05:
-                feature_array = X[:, self.feature_names.index(w)]
+                idx = np.where(self.feature_names == w)[0][0]
+                feature_array = X[:, idx]
                 pos = [feature_array[idx] for idx, x in enumerate(self.Y) if x == 1]
                 neg = [feature_array[idx] for idx, x in enumerate(self.Y) if x == 0]
                 m_pos=np.mean(pos)
