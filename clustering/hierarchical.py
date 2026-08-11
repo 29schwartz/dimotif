@@ -3,7 +3,7 @@ import scipy.cluster.hierarchy as hac
 import matplotlib.pyplot as plt
 
 
-class HierarchicalClutering(object):
+class HierarchicalClustering(object):
     '''
     classdocs
     '''
