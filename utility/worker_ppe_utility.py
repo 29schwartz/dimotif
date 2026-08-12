@@ -1,5 +1,4 @@
 import sys
-
 import tqdm
 import numpy as np
 
@@ -11,78 +10,80 @@ from utility.math_utility import get_sym_kl_rows
 from utility.file_utility import FileUtility
 from clustering.hierarchical import HierarchicalClustering
 
-def ppe(vocab_sizes, cluster_id = 1):
 
-    print("hello")
+def ppe(vocab_sizes, cluster_id=1):
     dataloader = DataLoader(cluster_id=cluster_id)
 
     pos_train_file, neg_train_file = dataloader.import_data()
 
     # load positive and negative sequences
-    pos_seqs=FileUtility.load_list(pos_train_file)
-    neg_seqs=FileUtility.load_list(neg_train_file)
+    pos_seqs = FileUtility.load_list(pos_train_file)
+    neg_seqs = FileUtility.load_list(neg_train_file)
 
-    print(f"Loaded and processed Ferredoxin cluster samples {cluster_id}")
+    print(f"Loaded and processed positive and negative ferredoxin samples for cluster {cluster_id}")
 
     # prepare labels and sequences
-    seqs=[seq.lower() for seq in pos_seqs+neg_seqs]
-    labels=[1]*len(pos_seqs)+[0]*len(neg_seqs)
+    seqs = [seq.lower() for seq in pos_seqs + neg_seqs]
+    labels = [1] * len(pos_seqs) + [0] * len(neg_seqs)
 
-    #-------------------------
+    # -------------------------
     from make_representations.cpe_apply import CPE
 
-    print(f"Beginning segmentation of sequences {cluster_id}")
-    segmented_seqs=[]
+    print(f"Beginning segmentation of sequences in cluster {cluster_id}")
+
+    segmented_seqs = []
     for i, vocab in tqdm.tqdm(enumerate(vocab_sizes)):
-        f=open('../data_config/swissprot_ppe','r')
-        CPE_Applier=CPE(f,separator='', merge_size=vocab)
+        f = open('../data_config/swissprot_ppe', 'r')
+        CPE_Applier = CPE(f, separator='', merge_size=vocab)
         for idx, seq in enumerate(seqs):
-            if i ==0:
+            if i == 0:
                 segmented_seqs.append([CPE_Applier.segment(seq)])
             else:
-                segmented_seqs[idx]+=[CPE_Applier.segment(seq)]
-    extended_sequences=[' '.join(l) for l in segmented_seqs]
-    possible_segmentations=['@@@'.join(l) for l in segmented_seqs]
+                segmented_seqs[idx] += [CPE_Applier.segment(seq)]
+    extended_sequences = [' '.join(l) for l in segmented_seqs]
+    possible_segmentations = ['@@@'.join(l) for l in segmented_seqs]
 
-    print(f"Completed segmentation of sequences {cluster_id}")
+    print(f"Completed segmentation of sequences in cluster {cluster_id}")
 
-    #----------------------------
+    # ----------------------------
 
-    print(f"Starting segmentation of sequences for {cluster_id}")
+    print(f"Starting segmentation of sequences for cluster {cluster_id}")
     # top 50 motifs
-    topn=50
+    topn = 50
     cpe_vectorizer = TfidfVectorizer(use_idf=False, analyzer='word',
-                                                  norm=None, stop_words=[], lowercase=True, binary=False, tokenizer=str.split)
+                                     norm=None, stop_words=[], lowercase=True, binary=False, tokenizer=str.split)
 
-    tf_vec=cpe_vectorizer.fit_transform(extended_sequences)
-    vocab=cpe_vectorizer.get_feature_names_out()
-    CH=Chi2Analysis(tf_vec,labels,vocab)
-    vocab_binary=[(x[0],x[2]) for x in CH.extract_features_fdr('../datasets/'+'/motifs.txt',
-                                                               N=topn, alpha=5e-2,
-                                                               direction=False,
-                                                               allow_subseq=False,
-                                                               binarization=True,
-                                                               remove_redundant_markers=False) if x[1]>0]
+    tf_vec = cpe_vectorizer.fit_transform(extended_sequences)
+    vocab = cpe_vectorizer.get_feature_names_out()
+    CH = Chi2Analysis(tf_vec, labels, vocab)
+    vocab_binary = [(x[0], x[2], cluster_id) for x in CH.extract_features_fdr('../datasets/' + '/motifs.txt',
+                                                                              N=topn, alpha=5e-2,
+                                                                              direction=False,
+                                                                              allow_subseq=False,
+                                                                              binarization=True,
+                                                                              remove_redundant_markers=False) if
+                    x[1] > 0]
 
     print()
-    print ('motif','\t', 'p-value')
-    print ('=====================')
-    for motif, pval in vocab_binary:
-        print (motif,'\t', pval)
-    #-----------------------------
+    print('motif', '\t', 'p-value')
+    print('=====================')
+    for motif, pval, cluster_id in vocab_binary:
+        print(motif, '\t', pval, '\t', cluster_id)
+    # -----------------------------
 
     idxs = np.array([np.where(vocab == v[0])[0][0] for v in vocab_binary])
-    pos_matrix=tf_vec.toarray()[0:len(pos_seqs),idxs]
+    pos_matrix = tf_vec.toarray()[0:len(pos_seqs), idxs]
 
     # it saves the co-occurance matrix in the output directory and sym_KL.pickle
-    DIST=get_sym_kl_rows(pos_matrix.T)
-    FileUtility.save_obj('../datasets/PPE_input_datasets/'+ str(cluster_id) + '/sym_KL', DIST) #made need to change to include dataset
+    DIST = get_sym_kl_rows(pos_matrix.T)
+    FileUtility.save_obj('../datasets/PPE_input_datasets/' + 'cluster_' + str(cluster_id) + '/sym_KL',
+                         DIST)  # made need to change to include dataset
 
-    #------------------------------
+    # ------------------------------
 
-    print(f"Beginning tree creation for {cluster_id}")
-    HC=HierarchicalClustering(DIST,[x[0] for x in vocab_binary])
-    motifs=vocab_binary
-    tree=HC.nwk
+    print(f"Creating dendogram for k-mers in cluster {cluster_id}")
+    HC = HierarchicalClustering(DIST, [x[0] for x in vocab_binary])
+    motifs = vocab_binary
+    tree = HC.nwk
 
     return vocab_binary
