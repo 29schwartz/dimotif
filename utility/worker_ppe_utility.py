@@ -9,7 +9,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from utility.math_utility import get_sym_kl_rows
 from utility.file_utility import FileUtility
 from clustering.hierarchical import HierarchicalClustering
-
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import time
 
 def ppe(vocab_sizes, cluster_id=1):
     dataloader = DataLoader(cluster_id=cluster_id)
@@ -76,8 +77,7 @@ def ppe(vocab_sizes, cluster_id=1):
 
     # it saves the co-occurance matrix in the output directory and sym_KL.pickle
     DIST = get_sym_kl_rows(pos_matrix.T)
-    FileUtility.save_obj('../datasets/PPE_input_datasets/' + 'cluster_' + str(cluster_id) + '/sym_KL',
-                         DIST)  # made need to change to include dataset
+    FileUtility.save_obj('../datasets/PPE_input_datasets/' + 'cluster_' + str(cluster_id) + '/sym_KL', DIST)  # made need to change to include dataset
 
     # ------------------------------
 
@@ -87,3 +87,26 @@ def ppe(vocab_sizes, cluster_id=1):
     tree = HC.nwk
 
     return vocab_binary
+
+def multiplex_ppe(cluster_ids, vocab_sizes, max_workers = 2):
+
+    start = time.time()
+    args_list = list(range(cluster_ids + 1))
+
+    print(f"number of cores to be used {max_workers}")
+
+    with ProcessPoolExecutor(max_workers = max_workers) as executor:
+        futures = [
+            executor.submit(ppe, vocab_sizes, arg) for arg in args_list
+        ]
+
+        results = []
+        for f in as_completed(futures):
+            try:
+                results.append(f.result())
+            except Exception as e:
+                print(f"Task failed with error: {e}")
+
+    end = time.time()
+    print(f"process completed in: {end - start:2f} seconds")
+    print(results)
