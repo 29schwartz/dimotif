@@ -1,6 +1,8 @@
 import sys
+
 import tqdm
 import numpy as np
+
 sys.path.append('../')
 from data_preprocessing.positive_negative_sampling import DataLoader
 from chi2analysis.chi2analysis import Chi2Analysis
@@ -9,8 +11,9 @@ from utility.math_utility import get_sym_kl_rows
 from utility.file_utility import FileUtility
 from clustering.hierarchical import HierarchicalClustering
 
-def ppe(vocab_sizes, cluster_id = 1, topn = 50):
+def ppe(vocab_sizes, cluster_id = 1):
 
+    print("hello")
     dataloader = DataLoader(cluster_id=cluster_id)
 
     pos_train_file, neg_train_file = dataloader.import_data()
@@ -19,6 +22,8 @@ def ppe(vocab_sizes, cluster_id = 1, topn = 50):
     pos_seqs=FileUtility.load_list(pos_train_file)
     neg_seqs=FileUtility.load_list(neg_train_file)
 
+    print(f"Loaded and processed Ferredoxin cluster samples {cluster_id}")
+
     # prepare labels and sequences
     seqs=[seq.lower() for seq in pos_seqs+neg_seqs]
     labels=[1]*len(pos_seqs)+[0]*len(neg_seqs)
@@ -26,6 +31,7 @@ def ppe(vocab_sizes, cluster_id = 1, topn = 50):
     #-------------------------
     from make_representations.cpe_apply import CPE
 
+    print(f"Beginning segmentation of sequences {cluster_id}")
     segmented_seqs=[]
     for i, vocab in tqdm.tqdm(enumerate(vocab_sizes)):
         f=open('../data_config/swissprot_ppe','r')
@@ -37,11 +43,14 @@ def ppe(vocab_sizes, cluster_id = 1, topn = 50):
                 segmented_seqs[idx]+=[CPE_Applier.segment(seq)]
     extended_sequences=[' '.join(l) for l in segmented_seqs]
     possible_segmentations=['@@@'.join(l) for l in segmented_seqs]
+
+    print(f"Completed segmentation of sequences {cluster_id}")
+
     #----------------------------
 
+    print(f"Starting segmentation of sequences for {cluster_id}")
     # top 50 motifs
-    topn=topn
-
+    topn=50
     cpe_vectorizer = TfidfVectorizer(use_idf=False, analyzer='word',
                                                   norm=None, stop_words=[], lowercase=True, binary=False, tokenizer=str.split)
 
@@ -71,7 +80,9 @@ def ppe(vocab_sizes, cluster_id = 1, topn = 50):
 
     #------------------------------
 
-
+    print(f"Beginning tree creation for {cluster_id}")
     HC=HierarchicalClustering(DIST,[x[0] for x in vocab_binary])
     motifs=vocab_binary
     tree=HC.nwk
+
+    return vocab_binary
