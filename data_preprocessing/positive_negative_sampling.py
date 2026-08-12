@@ -83,7 +83,7 @@ class DataLoader:
         neg_train_file = os.path.join(self.output_path, id, 'neg_train_' + id + '.txt')
 
         # testing file
-        pos_test_file = os.path.join(self.output_path, id, 'pos_test_' + id + '.txt')
-        neg_test_file = os.path.join(self.output_path, id, 'neg_train_' + id + '.txt')
+        #pos_test_file = os.path.join(self.output_path, id, 'pos_test_' + id + '.txt')
+        #neg_test_file = os.path.join(self.output_path, id, 'neg_train_' + id + '.txt')
 
         return pos_train_file, neg_train_file #,pos_test_file, neg_test_file
