@@ -1,7 +1,6 @@
 # This function is for creating the test data, this should be a separate function or script need to think about how to organize it.
 import pandas as pd
 import os
-from sklearn.model_selection import train_test_split
 
 class DataSampling:
     def __init__(self,
@@ -16,9 +15,9 @@ class DataSampling:
     def cluster_sampling(self):
         df = pd.read_csv(self.df_filepath)
 
-        cluster_ids = df['cluster'].nunique()
+        cluster_ids = list(df['cluster'].unique())
 
-        for id in range(cluster_ids):
+        for id in cluster_ids:
 
             folder_path = os.path.join(self.output_path, "cluster_" + str(id) + "/")
 
