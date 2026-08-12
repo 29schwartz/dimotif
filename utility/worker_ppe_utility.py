@@ -1,6 +1,7 @@
 import sys
 import tqdm
 import numpy as np
+import csv
 
 sys.path.append('../')
 from data_preprocessing.positive_negative_sampling import DataLoader
@@ -48,7 +49,6 @@ def ppe(vocab_sizes, cluster_id=1):
 
     # ----------------------------
 
-    print(f"Starting segmentation of sequences for cluster {cluster_id}")
     # top 50 motifs
     topn = 50
     cpe_vectorizer = TfidfVectorizer(use_idf=False, analyzer='word',
@@ -64,12 +64,12 @@ def ppe(vocab_sizes, cluster_id=1):
                                                                               binarization=True,
                                                                               remove_redundant_markers=False) if
                     x[1] > 0]
-
-    print()
-    print('motif', '\t', 'p-value')
-    print('=====================')
-    for motif, pval, cluster_id in vocab_binary:
-        print(motif, '\t', pval, '\t', cluster_id)
+    
+    #print()
+    #print('motif', '\t', 'p-value')
+    #print('=====================')
+    #for motif, pval, cluster_id in vocab_binary:
+    #    print(motif, '\t', pval, '\t', cluster_id)
     # -----------------------------
 
     idxs = np.array([np.where(vocab == v[0])[0][0] for v in vocab_binary])
@@ -82,9 +82,9 @@ def ppe(vocab_sizes, cluster_id=1):
     # ------------------------------
 
     print(f"Creating dendogram for k-mers in cluster {cluster_id}")
-    HC = HierarchicalClustering(DIST, [x[0] for x in vocab_binary])
+    HC = HierarchicalClustering(DIST, [x[0] for x in vocab_binary]) #need to edit code to save fig
     motifs = vocab_binary
-    tree = HC.nwk
+    #tree = HC.nwk
 
     return vocab_binary
 
@@ -109,4 +109,13 @@ def multiplex_ppe(cluster_ids, vocab_sizes, max_workers = 2):
 
     end = time.time()
     print(f"process completed in: {end - start:2f} seconds")
-    print(results)
+
+    with open("./output.csv", mode="w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["kmer", "pval", "cluster"])
+
+        # Write each tuple inside the sublists to the CSV
+        for sublist in results:
+            writer.writerows(sublist)
+
+    return results
