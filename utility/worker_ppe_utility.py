@@ -13,7 +13,74 @@ from clustering.hierarchical import HierarchicalClustering
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 
-def ppe(vocab_sizes, cluster_id=1):
+import matplotlib
+import matplotlib.pyplot as plt
+import seaborn as sns; sns.set()
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+
+#----------function for making heatmaps
+def create_mat_plot(
+    mat,
+    axis_names,
+    title,
+    filename,
+    xlab,
+    ylab,
+    cmap="Blues",
+    filetype=".png",
+    rx=0,
+    ry=0,
+    font_s=10,
+    annot=True,
+):
+    """Generates and saves a heatmap for 1D or 2D NumPy arrays without system TeX/dvipng dependencies."""
+    # Ensure Matplotlib uses internal rendering (no external TeX/dvipng required)
+    plt.rcParams["text.usetex"] = False
+
+    # Convert 1D array to a 2D row matrix (1, N) for Seaborn
+    mat = np.atleast_2d(mat)
+
+    plt.figure()
+
+    # Handle tick labels based on matrix dimensions
+    if len(axis_names) > 0:
+        xtick_labels = (
+            axis_names if mat.shape[1] == len(axis_names) else "auto"
+        )
+        ytick_labels = (
+            axis_names if mat.shape[0] == len(axis_names) else False
+        )
+
+        ax = sns.heatmap(
+            mat,
+            annot=annot,
+            cmap=cmap,
+            xticklabels=xtick_labels,
+            yticklabels=ytick_labels,
+        )
+    else:
+        ax = sns.heatmap(mat, annot=annot, cmap=cmap)
+
+    # Set labels and title
+    plt.title(title, fontsize=font_s)
+    plt.xlabel(xlab, fontsize=font_s)
+    plt.ylabel(ylab, fontsize=font_s)
+
+    # Adjust tick font size and rotation
+    plt.xticks(fontsize=font_s, rotation=rx)
+    plt.yticks(fontsize=font_s, rotation=ry)
+
+    # Save figure
+    plt.tight_layout()
+    plt.show()
+    plt.savefig(f"{filename}.{filetype}", bbox_inches="tight")
+    plt.close()
+
+#-------------------kmer finder function
+def ppe(vocab_sizes, topn = 30, cluster_id=1):
     dataloader = DataLoader(cluster_id=cluster_id)
 
     pos_train_file, neg_train_file = dataloader.import_data()
@@ -50,7 +117,7 @@ def ppe(vocab_sizes, cluster_id=1):
     # ----------------------------
 
     # top 50 motifs
-    topn = 50
+    topn = topn
     cpe_vectorizer = TfidfVectorizer(use_idf=False, analyzer='word',
                                      norm=None, stop_words=[], lowercase=True, binary=False, tokenizer=str.split)
 
@@ -77,7 +144,7 @@ def ppe(vocab_sizes, cluster_id=1):
 
     # it saves the co-occurance matrix in the output directory and sym_KL.pickle
     DIST = get_sym_kl_rows(pos_matrix.T)
-    FileUtility.save_obj('../datasets/PPE_input_datasets/' + 'cluster_' + str(cluster_id) + '/sym_KL', DIST)  # made need to change to include dataset
+    FileUtility.save_obj('../output/matrices/' + '/sym_KL' + str(cluster_id), DIST)  # made need to change to include dataset
 
     # ------------------------------
 
@@ -86,9 +153,20 @@ def ppe(vocab_sizes, cluster_id=1):
     motifs = vocab_binary
     #tree = HC.nwk
 
+    figure_caption = f'Divergence between co-occurrence patterns of motifs for cluster {cluster_id}' 
+
+    create_mat_plot(mat = DIST[0:30,0:30], 
+                    axis_names = [x[0] for x in motifs[0:30]],
+                    title = figure_caption,
+                    filename = f"../output/heatmaps/cluster_{cluster_id}",
+                    xlab = f'Top {topn} motifs',
+                    ylab = f'Top {topn} motifs',
+                    annot=False,
+                    rx=90)
+
     return vocab_binary
 
-def multiplex_ppe(cluster_ids, vocab_sizes, max_workers = 2):
+def multiplex_ppe(cluster_ids, vocab_sizes, topn = 50, max_workers = 2):
 
     start = time.time()
     args_list = list(range(cluster_ids + 1))
@@ -97,7 +175,7 @@ def multiplex_ppe(cluster_ids, vocab_sizes, max_workers = 2):
 
     with ProcessPoolExecutor(max_workers = max_workers) as executor:
         futures = [
-            executor.submit(ppe, vocab_sizes, arg) for arg in args_list
+            executor.submit(ppe, vocab_sizes, topn, arg) for arg in args_list
         ]
 
         results = []
@@ -110,7 +188,8 @@ def multiplex_ppe(cluster_ids, vocab_sizes, max_workers = 2):
     end = time.time()
     print(f"process completed in: {end - start:2f} seconds")
 
-    with open("./output.csv", mode="w", newline="", encoding="utf-8") as file:
+    print("saving results to output folder")
+    with open("../output/motifs.csv", mode="w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
         writer.writerow(["kmer", "pval", "cluster"])
 
