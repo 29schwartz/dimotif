@@ -35,6 +35,7 @@ def create_mat_plot(
     ry=0,
     font_s=10,
     annot=True,
+    show_plot=False,
 ):
     """Generates and saves a heatmap for 1D or 2D NumPy arrays without system TeX/dvipng dependencies."""
     # Ensure Matplotlib uses internal rendering (no external TeX/dvipng required)
@@ -75,12 +76,13 @@ def create_mat_plot(
 
     # Save figure
     plt.tight_layout()
-    plt.show()
+    if show_plot == True:
+        plt.show()
     plt.savefig(f"{filename}.{filetype}", bbox_inches="tight")
     plt.close()
 
 #-------------------kmer finder function
-def ppe(vocab_sizes, topn = 30, cluster_id=1):
+def ppe(vocab_sizes, topn, show_plot, cluster_id):
     dataloader = DataLoader(cluster_id=cluster_id)
 
     pos_train_file, neg_train_file = dataloader.import_data()
@@ -89,7 +91,7 @@ def ppe(vocab_sizes, topn = 30, cluster_id=1):
     pos_seqs = FileUtility.load_list(pos_train_file)
     neg_seqs = FileUtility.load_list(neg_train_file)
 
-    print(f"Loaded and processed positive and negative ferredoxin samples for cluster {cluster_id}")
+    print(f"Loaded and processed positive and negative ferredoxin samples for cluster {cluster_id}\n")
 
     # prepare labels and sequences
     seqs = [seq.lower() for seq in pos_seqs + neg_seqs]
@@ -98,7 +100,7 @@ def ppe(vocab_sizes, topn = 30, cluster_id=1):
     # -------------------------
     from make_representations.cpe_apply import CPE
 
-    print(f"Beginning segmentation of sequences in cluster {cluster_id}")
+    print(f"Beginning segmentation of sequences in cluster {cluster_id}\n")
 
     segmented_seqs = []
     for i, vocab in tqdm.tqdm(enumerate(vocab_sizes)):
@@ -112,7 +114,7 @@ def ppe(vocab_sizes, topn = 30, cluster_id=1):
     extended_sequences = [' '.join(l) for l in segmented_seqs]
     possible_segmentations = ['@@@'.join(l) for l in segmented_seqs]
 
-    print(f"Completed segmentation of sequences in cluster {cluster_id}")
+    print(f"Completed segmentation of sequences in cluster {cluster_id}\n")
 
     # ----------------------------
 
@@ -148,34 +150,35 @@ def ppe(vocab_sizes, topn = 30, cluster_id=1):
 
     # ------------------------------
 
-    print(f"Creating dendogram for k-mers in cluster {cluster_id}")
+    print(f"Creating dendogram for k-mers in cluster {cluster_id}\n")
     HC = HierarchicalClustering(DIST, [x[0] for x in vocab_binary]) #need to edit code to save fig
     motifs = vocab_binary
     #tree = HC.nwk
 
     figure_caption = f'Divergence between co-occurrence patterns of motifs for cluster {cluster_id}' 
 
-    create_mat_plot(mat = DIST[0:30,0:30], 
-                    axis_names = [x[0] for x in motifs[0:30]],
+    create_mat_plot(mat = DIST[0:topn,0:topn], 
+                    axis_names = [x[0] for x in motifs[0:topn]],
                     title = figure_caption,
                     filename = f"../output/heatmaps/cluster_{cluster_id}",
                     xlab = f'Top {topn} motifs',
                     ylab = f'Top {topn} motifs',
                     annot=False,
-                    rx=90)
+                    rx=90,
+                    show_plot=False)
 
     return vocab_binary
 
-def multiplex_ppe(cluster_ids, vocab_sizes, topn = 50, max_workers = 2):
+def multiplex_ppe(cluster_ids, vocab_sizes, topn = 50, show_plot = False, max_workers = 2):
 
     start = time.time()
     args_list = list(range(cluster_ids + 1))
 
-    print(f"number of cores to be used {max_workers}")
+    print(f"number of cores to be used {max_workers}\n")
 
     with ProcessPoolExecutor(max_workers = max_workers) as executor:
         futures = [
-            executor.submit(ppe, vocab_sizes, topn, arg) for arg in args_list
+            executor.submit(ppe, vocab_sizes, topn, show_plot, arg) for arg in args_list
         ]
 
         results = []
